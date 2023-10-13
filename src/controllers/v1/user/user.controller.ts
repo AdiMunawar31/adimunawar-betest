@@ -1,4 +1,5 @@
-import { Get, JsonController, Param, QueryParam, UseBefore } from 'routing-controllers';
+import { ObjectId } from 'mongoose';
+import { Body, Delete, Get, JsonController, Param, Put, QueryParam, UseBefore } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 
 import { IUser } from '@commons/interfaces/user.interface';
@@ -47,6 +48,32 @@ export class UserController {
     const user = await this.userService.getUserByIdentityNumber(identityNumber);
     return {
       status: 'success',
+      data: user,
+    };
+  }
+
+  @Put('/:id')
+  @OpenAPI({ summary: 'Update user by ID' })
+  @ResponseSchema(IUser, { isArray: false })
+  @UseBefore(auth())
+  async updateUserById(@Param('id') id: string, @Body() updateBody: Partial<IUser>) {
+    const user = await this.userService.updateById(id, updateBody);
+    return {
+      status: 'success',
+      message: 'User Updated Successful',
+      data: user,
+    };
+  }
+
+  @Delete('/:id')
+  @OpenAPI({ summary: 'Delete user by ID' })
+  @ResponseSchema(IUser, { isArray: false })
+  @UseBefore(auth())
+  async deleteUserById(@Param('id') id: string) {
+    const user = await this.userService.deleteById(id);
+    return {
+      status: 'success',
+      message: 'User Deleted Successful',
       data: user,
     };
   }

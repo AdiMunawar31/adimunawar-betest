@@ -12,5 +12,9 @@ export default interface CRUD<T> {
       page: number;
     };
   }>;
-  getById: (id: ObjectId) => Promise<T | null>;
+  getById: (id: string) => Promise<T | null>;
+  updateById: (id: string, updateBody: Partial<T>) => Promise<T | null>;
+  deleteById: (id: string) => Promise<T | null>;
+  getUserByAccountNumber: (accountNumber: string) => Promise<T>;
+  getUserByIdentityNumber: (identityNumber: string) => Promise<T>;
 }

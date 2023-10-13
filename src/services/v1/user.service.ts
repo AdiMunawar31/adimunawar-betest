@@ -1,6 +1,6 @@
-import { ObjectId } from 'mongoose';
+import mongoose, { ObjectId } from 'mongoose';
 import { BadRequestError, NotFoundError } from 'routing-controllers';
-import RedisClient from 'configs/redis';
+import RedisClient from '../../configs/redis';
 import CRUD from '@commons/interfaces/user.crud.interface';
 import Users from '@models/users.model';
 import { IUser, IUserSchema } from '@commons/interfaces/user.interface';
@@ -30,11 +30,15 @@ export class UserService implements CRUD<IUserSchema> {
     return await this.userModel.findOne({ emailAddress });
   }
 
-  async getById(id: ObjectId): Promise<IUserSchema | null> {
+  async getById(id: string): Promise<IUserSchema | null> {
     return await this.userModel.findById(id);
   }
 
-  async updateById(id: ObjectId, updateBody: Partial<IUser>): Promise<IUserSchema | null> {
+  async updateById(id: string, updateBody: Partial<IUser>): Promise<IUserSchema | null> {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new BadRequestError('Invalid user ID');
+    }
+
     if (updateBody.emailAddress) {
       delete updateBody.emailAddress;
     }
@@ -44,9 +48,24 @@ export class UserService implements CRUD<IUserSchema> {
       throw new BadRequestError('User not found');
     }
 
-    Object.assign(user, updateBody);
-    await user.save();
-    return user;
+    const reqBody = Object.assign(user, updateBody);
+    const userUpdated = await this.userModel.findByIdAndUpdate(id, { $set: reqBody }, { new: true });
+
+    if (!userUpdated) {
+      throw new BadRequestError('Failed to update user');
+    }
+
+    return userUpdated;
+  }
+
+  async deleteById(id: string): Promise<IUserSchema | null> {
+    const user = await this.getById(id);
+    if (!user) {
+      throw new BadRequestError('User not found');
+    }
+
+    const userDeleted = await this.userModel.findByIdAndDelete(id);
+    return userDeleted;
   }
 
   async findAll(limit = 10, page = 0) {

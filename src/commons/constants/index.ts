@@ -16,5 +16,5 @@ export enum BCRYPT {
 export enum CONSTANT {
   PASSWORD_FIELD = 'password',
   SAVE = 'save',
-  YOUR_EXPIRATION_TIME_IN_SECONDS = 86400,
+  YOUR_EXPIRATION_TIME_IN_SECONDS = 3600,
 }
