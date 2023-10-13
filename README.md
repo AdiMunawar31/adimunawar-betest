@@ -40,11 +40,9 @@ To run this project, ensure that you have Node.js and npm or yarn installed on y
 
 4. **Configure Environment Variables:**
 
-   - Duplicate the `.env.example` file to `.env` and configure the required environment variables as per your project's needs.
-
-     ```bash
-     cp .env.development.local .env.production.local
-     ```
+   ```bash
+   cp .env.development.local .env.production.local
+   ```
 
 ## Running the Project
 
