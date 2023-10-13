@@ -15,7 +15,7 @@ import passport from 'passport';
 import { useExpressServer } from 'routing-controllers';
 import xss from 'xss-clean';
 
-import handlingErrorsMiddleware from './middlewares/handlingErrors.middleware';
+import handlingErrorsMiddleware from '@middlewares/handlingErrors.middleware';
 
 let serverConnection: http.Server;
 
