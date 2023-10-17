@@ -1,5 +1,5 @@
 import { IsBoolean, IsDate, IsString } from 'class-validator';
-import { Document, ObjectId } from 'mongoose';
+import { Document } from 'mongoose';
 
 import ITimesStamp from '@commons/interfaces/timestamp.interface';
 
@@ -8,7 +8,7 @@ export class IToken extends ITimesStamp {
   token: string;
 
   @IsString()
-  userId: ObjectId;
+  userId: string;
 
   @IsString()
   type: string;

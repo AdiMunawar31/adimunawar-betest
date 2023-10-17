@@ -30,7 +30,7 @@ export class UserService implements CRUD<IUserSchema> {
     return await this.userModel.findOne({ emailAddress });
   }
 
-  async getById(id: string): Promise<IUserSchema | null> {
+  async getById(id: string | ObjectId): Promise<IUserSchema | null> {
     return await this.userModel.findById(id);
   }
 
