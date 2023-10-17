@@ -1,69 +1,147 @@
-import request from 'supertest';
-import { Express } from 'express';
-import { createExpressServer } from 'routing-controllers';
-import { AuthControllerV1 } from '@controllers/v1'; // Ganti dengan path sesuai dengan struktur proyek Anda
+import { expect } from 'chai';
+import sinon from 'sinon';
 
-describe('AuthControllerV1', () => {
-  let app: Express;
+import { AuthService, TokenService, UserService } from '@services/v1';
+import { AuthControllerV1 } from '@controllers/v1';
+import RegisterDto from '@dtos/auth/register.dto';
+import LoginDto from '@dtos/auth/login.dto';
 
-  beforeAll(() => {
-    app = createExpressServer({
-      controllers: [AuthControllerV1],
+describe('AuthController', () => {
+  let authController: any;
+  let tokenService: any;
+  let userService: any;
+  let authService: any;
+
+  before(() => {
+    // Membuat instance dari controller dan stubing pustaka-pustaka terkait
+    tokenService = new TokenService();
+    userService = new UserService();
+    authService = new AuthService();
+    authController = new AuthControllerV1();
+    sinon.stub(authController, 'tokenService').value(tokenService);
+    sinon.stub(authController, 'userService').value(userService);
+    sinon.stub(authController, 'authService').value(authService);
+  });
+
+  describe('register', () => {
+    it('should register a new user', async () => {
+      const createUserStub = sinon.stub(userService, 'createUser').resolves({
+        emailAddress: 'adimunawar@example.com',
+        userName: 'adimunawar',
+        password: 'Test123',
+        accountNumber: '1234567890',
+        identityNumber: '1234567890123456',
+        id: '7984179364187298'
+      });
+
+      const userData = new RegisterDto();
+      userData.emailAddress = 'adimunawar@example.com';
+      userData.userName = 'adimunawar';
+      userData.password = 'Test123';
+      userData.accountNumber = '1234567890';
+      userData.identityNumber = '1234567890123456';
+
+      const user = await authController.register(userData);
+      const tokens = {};
+
+      expect(createUserStub.calledWith(userData)).to.be.true;
+      expect(user).to.deep.equal({
+        user: {
+          emailAddress: 'adimunawar@example.com',
+          userName: 'adimunawar',
+          password: 'Test123',
+          accountNumber: '1234567890',
+          identityNumber: '1234567890123456',
+          id: '7984179364187298'
+        },
+        tokens
+      });
     });
   });
 
-  it('should register a new user', async () => {
-    const userData = {
-      emailAddress: 'testuser@example.com',
-      userName: 'testuser',
-      password: 'password123',
-      accountNumber: '1234567890',
-      identityNumber: '1234567890123456',
-    };
+  describe('login', () => {
+    it('should log in a user', async () => {
+      // Membuat stub untuk authService.loginUserWithEmailAndPassword
+      const loginUserStub = sinon.stub(authService, 'loginUserWithEmailAndPassword').resolves({
+        emailAddress: 'adimunawar@example.com',
+        password: 'Test123',
+      });
+      
+      const userData = new LoginDto();
+      userData.emailAddress = 'adimunawar@example.com';
+      userData.password = 'Test123';
 
-    const response = await request(app)
-      .post('/api/v1/auth/register') // Perubahan path ke "/api/v1/auth/register"
-      .send(userData);
+      const user = await authController.login(userData);
+      const tokens = {};
 
-    expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('user');
-    expect(response.body).toHaveProperty('tokens');
+      expect(loginUserStub.calledWith(userData.emailAddress, userData.password)).to.be.true;
+      expect(user).to.deep.equal({
+        user: {
+          emailAddress: 'adimunawar@example.com',
+          password: 'Test123',
+        },
+        tokens
+      });
+    });
   });
 
-  it('should log in a user', async () => {
-    const userData = {
-      emailAddress: 'testuser@example.com',
-      password: 'password123',
-    };
+  describe('logout', () => {
+    it('should log out a user', async () => {
+      // Membuat stub untuk authService.logout
+      const logoutStub = sinon.stub(authService, 'logout').resolves();
+  
+      const userData = { refreshToken: 'dummy-refresh-token' };
 
-    const response = await request(app)
-      .post('/api/v1/auth/login') // Perubahan path ke "/api/v1/auth/login"
-      .send(userData);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('user');
-    expect(response.body).toHaveProperty('tokens');
+      const result = await authController.logout(userData);
+      
+      expect(logoutStub.calledWith(userData.refreshToken)).to.be.true;
+      expect(result).to.deep.equal({ message: 'logout success' });
+    });
   });
 
-  it('should log out a user', async () => {
-    const userData = {
-      refreshToken: 'your_refresh_token_here',
-    };
+  describe('refreshToken', () => {
+    it('should refresh user token and refresh token', async () => {
+      // Membuat stub untuk authService.refreshAuth
+      const refreshAuthStub = sinon.stub(authService, 'refreshAuth').resolves({});
+  
+      const userData = { refreshToken: 'dummy-refresh-token' };
 
-    const response = await request(app)
-      .post('/api/v1/auth/logout') // Perubahan path ke "/api/v1/auth/logout"
-      .send(userData);
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('message', 'logout success');
+      const result = await authController.refreshToken(userData);
+      
+      expect(refreshAuthStub.calledWith(userData.refreshToken)).to.be.true;
+      expect(result).to.deep.equal({ /* data dummy hasil refreshToken */ });
+    });
   });
 
-  // Add more test cases for other controller methods as needed
+  describe('forgotPassword', () => {
+    it('should send reset token to reset the password', async () => {
+      // Membuat stub untuk tokenService.generateResetPasswordToken
+      const generateResetPasswordTokenStub = sinon.stub(tokenService, 'generateResetPasswordToken').resolves('reset-token');
+    
+      const userData = { emailAddress: 'adimunawar' };
 
-  // Clean up: Uncomment this if you want to reset data after tests
-  /*
-  afterAll(() => {
-    // Add code to clean up data or close connections here if needed
+      const result = await authController.forgotPassword(userData);
+      
+      expect(generateResetPasswordTokenStub.calledWith(userData.emailAddress)).to.be.true;
+      expect(result).to.deep.equal({ token: 'reset-token' });
+    });
   });
-  */
+
+  describe('resetPassword', () => {
+    it('should reset user password', async () => {
+      // Membuat stub untuk authService.resetPassword
+      const resetPasswordStub = sinon.stub(authService, 'resetPassword').resolves();
+    
+      const userData = { token: 'reset-token', password: 'new-password' };
+
+      const result = await authController.resetPassword(userData);
+      
+      expect(resetPasswordStub.calledWith(userData.token, userData.password)).to.be.true;
+      expect(result).to.deep.equal({ message: 'password successfully updated' });
+    });
+  });
+
+  after(() => {
+    sinon.restore();
+  });
 });
