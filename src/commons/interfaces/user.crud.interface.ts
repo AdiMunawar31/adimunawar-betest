@@ -1,4 +1,4 @@
-import { LeanDocument, ObjectId } from 'mongoose';
+import { LeanDocument } from 'mongoose';
 
 export default interface CRUD<T> {
   findAll: (

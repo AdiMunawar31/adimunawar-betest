@@ -1,8 +1,8 @@
-import { IsBoolean, IsDate, IsString } from 'class-validator';
-import mongoose, { Document, ObjectId, Schema } from 'mongoose';
-
 import { MODELS, TokenTypes } from '@commons/constants';
 import ITimesStamp from '@commons/interfaces/timestamp.interface';
+import { IsBoolean, IsDate, IsString } from 'class-validator';
+import mongoose, { Document, Schema } from 'mongoose';
+
 import toJSON from '@utils/toJSON.plugin';
 
 export class IToken extends ITimesStamp {
@@ -10,7 +10,7 @@ export class IToken extends ITimesStamp {
   token: string;
 
   @IsString()
-  userId: ObjectId;
+  userId: string;
 
   @IsString()
   type: string;
@@ -32,7 +32,7 @@ const tokenSchema: Schema = new Schema(
       index: true,
     },
     userId: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: MODELS.USERS,
       required: true,
     },

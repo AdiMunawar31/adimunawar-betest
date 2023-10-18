@@ -1,7 +1,9 @@
 import { TokenTypes } from '@commons/constants';
-import { jwt } from './index';
-import Users from '@models/users.model';
 import { ExtractJwt, Strategy as JwtStrategy } from 'passport-jwt';
+
+import Users from '@models/users.model';
+
+import { jwt } from './index';
 
 const jwtOptions = {
   secretOrKey: jwt.secret,

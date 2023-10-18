@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
+import { IUser } from '@commons/interfaces/user.interface';
+import { NextFunction, Request, Response } from 'express';
 import passport from 'passport';
 import { UnauthorizedError } from 'routing-controllers';
-import { IUser } from '@commons/interfaces/user.interface';
 
 const verifyCallback = (req: Request, resolve: Function, reject: Function) => async (err: Error | null, user: IUser | undefined, info: any) => {
   if (err || info || !user) {

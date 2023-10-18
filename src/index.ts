@@ -1,5 +1,6 @@
-import { initSwagger } from 'swagger';
 import { AuthControllerV1, UserControllerV1 } from '@controllers/v1';
+import { initSwagger } from 'swagger';
+
 import App from './app';
 
 const server = new App([AuthControllerV1, UserControllerV1]);

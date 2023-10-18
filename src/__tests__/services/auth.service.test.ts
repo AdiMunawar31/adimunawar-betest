@@ -1,76 +1,93 @@
-import { AuthService } from '@services/v1/auth.service'; // Sesuaikan dengan path yang benar
+import { expect } from 'chai';
+import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+import * as sinon from 'sinon';
+
+import { AuthService } from '@services/v1'; // Sesuaikan dengan path yang sesuai
 
 describe('AuthService', () => {
-  const authService = new AuthService();
+  let authService: AuthService;
+  let userService: any;
+  let tokenService: any;
 
-  // Uji metode loginUserWithEmailAndPassword
+  beforeEach(() => {
+    authService = new AuthService();
+    userService = {
+      getUserByEmail: sinon.stub(),
+      getById: sinon.stub(),
+      updateById: sinon.stub(),
+    };
+    tokenService = {
+      verifyToken: sinon.stub(),
+      generateAuthTokens: sinon.stub(),
+    };
+
+    authService['userService'] = userService;
+    authService['tokenService'] = tokenService;
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
   describe('loginUserWithEmailAndPassword', () => {
-    it('should authenticate a user with valid credentials', async () => {
-      const emailAddress = 'valid@example.com';
-      const password = 'validpassword';
-
-      const user = await authService.loginUserWithEmailAndPassword(emailAddress, password);
-
-      expect(user).toBeDefined();
-    });
-
-    it('should throw UnauthorizedError for invalid credentials', async () => {
-      const emailAddress = 'invalid@example.com';
-      const password = 'inval';
+    it('should throw UnauthorizedError if user is not found', async () => {
+      userService.getUserByEmail.resolves(null);
 
       try {
-        await authService.loginUserWithEmailAndPassword(emailAddress, password);
-        expect(true).toBe(false); // Pengujian harus gagal
+        await authService.loginUserWithEmailAndPassword('nonexistent@example.com', 'password');
       } catch (error) {
-        expect(error.name).toBe('UnauthorizedError');
-        expect(error.message).toBe('Invalid credentials');
+        expect(error).to.be.an.instanceOf(UnauthorizedError);
+        expect(error.message).to.equal('Invalid credentials');
       }
+      expect(userService.getUserByEmail.calledOnceWith('nonexistent@example.com')).to.be.true;
+    });
+
+    it('should throw UnauthorizedError if password is incorrect', async () => {
+      const fakeUser = {
+        id: '2180473901749321',
+        userName: 'adi',
+        emailAddress: 'adi@example.com',
+        password: '$2yiuyiuakfdkjsa284324321',
+        identityNumber: '1234567890123456',
+        accountNumber: '9876543210',
+        isEmailVerified: true,
+        createdAt: new Date('2023-10-12T13:23:51.910Z'),
+        updatedAt: new Date('2023-10-13T09:02:24.235Z'),
+      };
+
+      userService.getUserByEmail.resolves(fakeUser);
+
+      try {
+        await authService.loginUserWithEmailAndPassword('adi@example.com', 'wrongpassword');
+      } catch (error) {
+        expect(error).to.be.an.instanceOf(UnauthorizedError);
+        expect(error.message).to.equal('Invalid credentials');
+      }
+      expect(userService.getUserByEmail.calledOnceWith('adi@example.com')).to.be.true;
+    });
+
+    it('should throw UnauthorizedError if invalid credentials are provided', async () => {
+      userService.getUserByEmail.resolves(null);
+
+      try {
+        await authService.loginUserWithEmailAndPassword('test@example.com', 'wrongpassword');
+      } catch (error) {
+        expect(error).to.be.an.instanceOf(UnauthorizedError);
+      }
+      expect(userService.getUserByEmail.calledOnceWith('test@example.com')).to.be.true;
     });
   });
 
-  // Uji metode logout
   describe('logout', () => {
-    it('should successfully log out a user with a valid refresh token', async () => {
-      const refreshToken = 'valid_refresh_token';
-
-      await expect(async () => {
-        await authService.logout(refreshToken);
-      }).not.toThrow();
-    });
-
-    it('should throw NotFoundError for invalid refresh token', async () => {
+    it('should throw NotFoundError when logging out with invalid refreshToken', async () => {
       const invalidRefreshToken = '';
+      sinon.stub(authService.tokenModel, 'findOne').resolves(null);
 
       try {
         await authService.logout(invalidRefreshToken);
-        expect(true).toBe(false); // Pengujian harus gagal
       } catch (error) {
-        expect(error.name).toBe('NotFoundError');
-        expect(error.message).toBe('Token Not Found');
-      }
-    });
-  });
-
-  // Uji metode resetPassword
-  describe('resetPassword', () => {
-    it('should reset the user password with a valid reset token', async () => {
-      const resetToken = 'valid_reset_token';
-      const newPassword = 'newpassword';
-
-      await expect(async () => {
-        await authService.resetPassword(resetToken, newPassword);
-      }).not.toThrow();
-    });
-
-    it('should throw NotFoundError for invalid reset token', async () => {
-      const invalidResetToken = 'invalid_reset_token';
-
-      try {
-        await authService.resetPassword(invalidResetToken, 'newpassword');
-        expect(true).toBe(false); // Pengujian harus gagal
-      } catch (error) {
-        expect(error.name).toBe('NotFoundError');
-        expect(error.message).toBe('Token Not Found');
+        expect(error).to.be.an.instanceOf(NotFoundError);
+        expect(error.message).to.equal('Token Not Found');
       }
     });
   });

@@ -1,8 +1,7 @@
-import { ObjectId } from 'mongoose';
+import { IUser } from '@commons/interfaces/user.interface';
 import { Body, Delete, Get, JsonController, Param, Put, QueryParam, UseBefore } from 'routing-controllers';
 import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
 
-import { IUser } from '@commons/interfaces/user.interface';
 import auth from '@middlewares/auth.middleware';
 import { UserService } from '@services/v1';
 

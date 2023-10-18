@@ -5,12 +5,7 @@
     "node": true
   },
   "parser": "@typescript-eslint/parser",
-  "extends": [
-    "prettier",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:prettier/recommended",
-    "standard-with-typescript"
-  ],
+  "extends": ["prettier", "plugin:@typescript-eslint/recommended", "plugin:prettier/recommended"],
   "parserOptions": {
     "ecmaVersion": 2018,
     "sourceType": "module"
@@ -31,9 +26,7 @@
       {
         "groups": [
           ["^@?\\w"],
-          [
-            "^(@common|@models|@v1|@config|@app|@middlewares|@exceptions|@utils|@services|@__tests__)(/.*|$)"
-          ],
+          ["^(@common|@models|@v1|@config|@app|@middlewares|@exceptions|@utils|@services|@__tests__)(/.*|$)"],
           // Parent imports. Put `..` last.
           ["^\\.\\.(?!/?$)", "^\\.\\./?$"],
           // Other relative imports. Put same-folder imports and `.` last.

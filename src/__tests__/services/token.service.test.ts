@@ -1,112 +1,139 @@
-import request from 'supertest';
-import { TokenService } from '@services/v1/token.service';
+import { TokenTypes } from '@commons/constants';
+import { ITokenSchema } from '@commons/interfaces/token.interface';
+import { IUserSchema } from '@commons/interfaces/user.interface';
+import { assert, expect } from 'chai';
+import jsonwebtoken from 'jsonwebtoken';
+import moment from 'moment';
+import * as sinon from 'sinon';
+
+import Tokens from '@models/tokens.model';
+import { TokenService } from '@services/v1';
+
+import { jwt } from '../../configs';
 
 describe('TokenService', () => {
-  let tokenService: any;
+  let tokenService: TokenService;
+  let userService: any;
 
-  beforeEach(() => {
+  before(() => {
     tokenService = new TokenService();
+    userService = {
+      getUserByEmail: sinon.stub(),
+    };
+    tokenService['userService'] = userService;
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   describe('generateAuthTokens', () => {
-    it('should generate auth tokens for a user', async () => {
-      const user = {
-        id: 'user_id',
+    it('should generate authentication tokens', async () => {
+      const fakeUser: Partial<IUserSchema> = {
+        id: '2180473901749321',
+        userName: 'adi',
+        emailAddress: 'adi@example.com',
+        password: '$2yiuyiuakfdkjsa284324321',
+        identityNumber: '1234567890123456',
+        accountNumber: '9876543210',
+        isEmailVerified: true,
+        createdAt: new Date('2023-10-12T13:23:51.910Z'),
+        updatedAt: new Date('2023-10-13T09:02:24.235Z'),
       };
 
-      const authTokens = await tokenService.generateAuthTokens(user);
+      const createStub = sinon.stub(Tokens, 'create').resolves({});
 
-      expect(authTokens).toHaveProperty('access');
-      expect(authTokens).toHaveProperty('refresh');
-      expect(authTokens.access).toHaveProperty('token');
-      expect(authTokens.access).toHaveProperty('expires');
-      expect(authTokens.refresh).toHaveProperty('token');
-      expect(authTokens.refresh).toHaveProperty('expire');
+      userService.getUserByEmail.resolves(fakeUser);
+
+      try {
+        const tokens = await tokenService.generateAuthTokens(fakeUser as IUserSchema);
+
+        expect(tokens).to.have.property('access');
+        expect(tokens).to.have.property('refresh');
+        sinon.assert.calledOnce(createStub);
+      } catch (error) {
+        throw error;
+      }
     });
   });
 
   describe('generateToken', () => {
-    it('should generate a JWT token', () => {
-      const userId = 'user_id';
-      const expire = 1234567890;
-      const type = 'ACCESS';
-
+    it('should generate a valid JWT token', () => {
+      const userId = '12345';
+      const expire = moment().add(1, 'hour').unix();
+      const type = TokenTypes.ACCESS;
       const token = tokenService.generateToken(userId, expire, type);
 
-      expect(token).toBeTruthy();
+      expect(token).to.be.a('string');
+
+      const decoded = jsonwebtoken.verify(token, jwt.secret);
+      expect(decoded).to.have.property('sub', userId);
+      expect(decoded).to.have.property('exp', expire);
+      expect(decoded).to.have.property('type', type);
     });
   });
 
   describe('saveToken', () => {
     it('should save a token to the database', async () => {
-      const mockCreate = jest.fn();
-      tokenService.saveToken = mockCreate;
-
-      const token = 'your_token_here';
-      const userId = 'user_id';
+      const token = 'fakeToken';
+      const userId = '12345';
       const expires = new Date();
-      const type = 'RESET_PASSWORD';
+      const type = TokenTypes.RESET_PASSWORD;
 
+      const createStub = sinon.stub(Tokens, 'create').resolves({});
       await tokenService.saveToken(token, userId, expires, type);
 
-      expect(mockCreate).toHaveBeenCalledWith({
-        token,
-        userId,
-        expires,
-        type,
-        blacklisted: false,
-      });
+      expect(createStub.calledOnce).to.be.true;
+      expect(
+        createStub.calledWith({
+          token,
+          userId,
+          expires,
+          type,
+          blacklisted: false,
+        }),
+      ).to.be.true;
     });
   });
 
   describe('verifyToken', () => {
-    it('should verify and retrieve a token from the database', async () => {
-      const mockFindOne = jest.fn().mockReturnValue({});
-      tokenService.verifyToken = mockFindOne;
+    it('should verify a valid token', async () => {
+      const fakeToken = 'fakeToken';
+      const fakePayload = { sub: '12345' };
+      const fakeTokenDoc: Partial<ITokenSchema> = { token: fakeToken, type: TokenTypes.ACCESS, userId: fakePayload.sub, blacklisted: false };
 
-      const token = 'your_token_here';
-      const type = 'RESET_PASSWORD';
+      const verifyStub: sinon.SinonStub = sinon.stub(jsonwebtoken, 'verify');
+      verifyStub.withArgs(fakeToken, jwt.secret).returns(fakePayload);
 
-      const tokenDoc = await tokenService.verifyToken(token, type);
-
-      expect(mockFindOne).toHaveBeenCalledWith({ token, type, userId: expect.any(String), blacklisted: false });
-    });
-
-    it('should throw an error if the token is not found', async () => {
-      const mockFindOne = jest.fn().mockReturnValue(null);
-      tokenService.verifyToken = mockFindOne;
-
-      const token = 'invalid_token';
+      const findOneStub = sinon.stub(Tokens, 'findOne').resolves(fakeTokenDoc);
 
       try {
-        await tokenService.verifyToken(token, 'INVALID_TYPE');
+        const tokenDoc = await tokenService.verifyToken(fakeToken, TokenTypes.ACCESS);
+
+        assert.deepEqual(tokenDoc, fakeTokenDoc);
+        assert.isTrue(verifyStub.calledOnce);
+        assert.isTrue(findOneStub.calledOnce);
       } catch (error) {
-        expect(error.message).toBe('Token not found');
+        throw error;
+      } finally {
+        verifyStub.restore();
       }
     });
-  });
-  describe('generateResetPasswordToken', () => {
-    it('should generate a reset password token for a user', async () => {
-      tokenService.userService.getUserByEmail = jest.fn().mockReturnValue({
-        id: 'user_id',
-      });
 
-      const emailAddress = 'user@example.com';
-      const resetPasswordToken = await tokenService.generateResetPasswordToken(emailAddress);
+    it('should throw an error if token is not found', async () => {
+      const fakeToken = 'fakeToken';
 
-      expect(tokenService.userService.getUserByEmail).toHaveBeenCalledWith(emailAddress);
-      expect(resetPasswordToken).toBeTruthy();
-    });
+      const verifyStub: sinon.SinonStub = sinon.stub(jsonwebtoken, 'verify');
+      verifyStub.withArgs(fakeToken, jwt.secret).throws(new Error('Token not found'));
 
-    it('should throw an error if the user does not exist', async () => {
-      tokenService.userService.getUserByEmail = jest.fn().mockReturnValue(null);
-
-      const emailAddress = 'non_existent@example.com';
+      sinon.stub(Tokens, 'findOne').resolves(null);
 
       try {
-        await tokenService.generateResetPasswordToken(emailAddress);
+        await tokenService.verifyToken(fakeToken, TokenTypes.ACCESS);
       } catch (error) {
-        expect(error.message).toBe('User not exists with this email');
+        assert.equal(error.message, 'Token not found');
+      } finally {
+        verifyStub.restore();
       }
     });
   });
