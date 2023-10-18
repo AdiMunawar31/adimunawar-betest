@@ -1,9 +1,10 @@
-import App from '@app';
 import { defaultMetadataStorage as classTransformerDefaultMetadataStorage } from 'class-transformer/cjs/storage';
 import { validationMetadatasToSchemas } from 'class-validator-jsonschema';
 import { getMetadataArgsStorage } from 'routing-controllers';
 import { routingControllersToSpec } from 'routing-controllers-openapi';
 import swaggerUi from 'swagger-ui-express';
+
+import App from '@app';
 
 function initSwagger(server: App) {
   const schemas = validationMetadatasToSchemas({

@@ -1,9 +1,9 @@
+import { BCRYPT, CONSTANT, MODELS } from '@commons/constants';
+import { IUserSchema } from '@commons/interfaces/user.interface';
 import bcrypt from 'bcrypt';
 import mongoose, { Schema } from 'mongoose';
 
-import { BCRYPT, CONSTANT, MODELS } from '@commons/constants';
 import toJSON from '@utils/toJSON.plugin';
-import { IUserSchema } from '@commons/interfaces/user.interface';
 
 const userSchema: Schema = new Schema(
   {
@@ -51,6 +51,7 @@ const userSchema: Schema = new Schema(
 );
 
 userSchema.pre(CONSTANT.SAVE, async function (next) {
+  // eslint-disable-next-line @typescript-eslint/no-this-alias
   const user = this;
   if (user.isModified(CONSTANT.PASSWORD_FIELD)) {
     user.password = await bcrypt.hash(user.password, BCRYPT.SALT_ROUNDS);

@@ -1,17 +1,17 @@
+import { TokenTypes } from '@commons/constants';
+import { IUserSchema } from '@commons/interfaces/user.interface';
 import jsonwebtoken from 'jsonwebtoken';
 import moment from 'moment';
-import { ObjectId } from 'mongoose';
 import { NotFoundError } from 'routing-controllers';
 
-import { TokenTypes } from '@commons/constants';
-import { jwt } from '../../configs';
 import Tokens from '@models/tokens.model';
 
+import { jwt } from '../../configs';
+
 import { UserService } from './user.service';
-import { IUserSchema } from '@commons/interfaces/user.interface';
 
 export class TokenService {
-  private readonly userService = new UserService();
+  private userService = new UserService();
 
   async generateAuthTokens(user: IUserSchema) {
     const accessTokenExpire = moment().add(jwt.accessExpireIn as moment.unitOfTime.DurationConstructor, jwt.accessExpireFormat);
@@ -34,7 +34,7 @@ export class TokenService {
     };
   }
 
-  generateToken(userId: ObjectId, expire: number, type: string) {
+  generateToken(userId: string, expire: number, type: string) {
     const payload = {
       sub: userId,
       iat: moment().unix(),
@@ -45,7 +45,7 @@ export class TokenService {
     return jsonwebtoken.sign(payload, jwt.secret);
   }
 
-  async saveToken(token: string, userId: ObjectId, expires: Date, type: TokenTypes, blacklisted = false) {
+  async saveToken(token: string, userId: string, expires: Date, type: TokenTypes, blacklisted = false) {
     return await Tokens.create({
       token,
       userId,

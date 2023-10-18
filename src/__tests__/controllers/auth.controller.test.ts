@@ -1,142 +1,217 @@
+import { AuthControllerV1 } from '@controllers/v1';
+import ForgotPasswordDto from '@dtos/auth/forgotPassword.dto';
+import LoginDto from '@dtos/auth/login.dto';
+import LogoutDto from '@dtos/auth/logout.dto';
+import RefreshTokenDto from '@dtos/auth/refreshToken.dto';
+import RegisterDto from '@dtos/auth/register.dto';
+import ResetPasswordDto from '@dtos/auth/resetPassword.dto';
 import { expect } from 'chai';
 import sinon from 'sinon';
 
-import { AuthService, TokenService, UserService } from '@services/v1';
-import { AuthControllerV1 } from '@controllers/v1';
-import RegisterDto from '@dtos/auth/register.dto';
-import LoginDto from '@dtos/auth/login.dto';
+import producerService from '@services/v1/producer.service';
 
 describe('AuthController', () => {
+  const TOKEN =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NTI3ZjM2NzgyZTYyMGY1OGD8NDkxNzkiLCJpYXQiOjE2OTc1MjAwMDAsImV4cCI6MTY5NzUyMzYwMCwidHlwZSI6ImFjY2VzcyJ9.10MHT2yp8prBt-UpT6ITyhjaZgiQoLfl0iym_FU_fd4';
+
   let authController: any;
   let tokenService: any;
   let userService: any;
   let authService: any;
+  let producerServiceSendStub: any;
 
   before(() => {
-    // Membuat instance dari controller dan stubing pustaka-pustaka terkait
-    tokenService = new TokenService();
-    userService = new UserService();
-    authService = new AuthService();
+    tokenService = {
+      generateResetPasswordToken: sinon.stub(),
+      generateAuthTokens: sinon.stub(),
+    };
+
+    userService = {
+      createUser: sinon.stub(),
+    };
+
+    authService = {
+      loginUserWithEmailAndPassword: sinon.stub(),
+      logout: sinon.stub(),
+      refreshAuth: sinon.stub(),
+      resetPassword: sinon.stub(),
+    };
+
+    producerServiceSendStub = sinon.stub(producerService, 'send');
+
     authController = new AuthControllerV1();
-    sinon.stub(authController, 'tokenService').value(tokenService);
-    sinon.stub(authController, 'userService').value(userService);
-    sinon.stub(authController, 'authService').value(authService);
+    authController['tokenService'] = tokenService;
+    authController['userService'] = userService;
+    authController['authService'] = authService;
+  });
+
+  after(() => {
+    producerServiceSendStub.restore();
   });
 
   describe('register', () => {
     it('should register a new user', async () => {
-      const createUserStub = sinon.stub(userService, 'createUser').resolves({
-        emailAddress: 'adimunawar@example.com',
-        userName: 'adimunawar',
-        password: 'Test123',
-        accountNumber: '1234567890',
-        identityNumber: '1234567890123456',
-        id: '7984179364187298'
-      });
-
       const userData = new RegisterDto();
-      userData.emailAddress = 'adimunawar@example.com';
-      userData.userName = 'adimunawar';
+      userData.emailAddress = 'adi31@gmail.com';
+      userData.userName = 'adi';
       userData.password = 'Test123';
       userData.accountNumber = '1234567890';
-      userData.identityNumber = '1234567890123456';
+      userData.identityNumber = '0987654321654321';
 
-      const user = await authController.register(userData);
-      const tokens = {};
+      const userMock = {
+        userName: 'adi',
+        emailAddress: 'adi31@gmail.com',
+        identityNumber: '0987654321654321',
+        accountNumber: '1234567890',
+        isEmailVerified: false,
+        createdAt: '2023-10-17T05:24:20.902Z',
+        updatedAt: '2023-10-17T05:24:20.902Z',
+        id: '652e1a84386b280062103600',
+      };
 
-      expect(createUserStub.calledWith(userData)).to.be.true;
-      expect(user).to.deep.equal({
-        user: {
-          emailAddress: 'adimunawar@example.com',
-          userName: 'adimunawar',
-          password: 'Test123',
-          accountNumber: '1234567890',
-          identityNumber: '1234567890123456',
-          id: '7984179364187298'
+      const accessTokensMock = {
+        token: TOKEN,
+        expires: 1697523860,
+      };
+
+      const refreshTokensMock = {
+        token: TOKEN,
+        expires: 1697523600,
+      };
+
+      userService.createUser.resolves(userMock);
+      tokenService.generateAuthTokens.resolves({ access: accessTokensMock, refresh: refreshTokensMock });
+
+      const result = await authController.register(userData);
+
+      expect(userService.createUser.calledWith(userData)).to.be.true;
+      expect(tokenService.generateAuthTokens.calledWith(userMock)).to.be.true;
+
+      const expectedResponse = {
+        user: userMock,
+        tokens: {
+          access: accessTokensMock,
+          refresh: refreshTokensMock,
         },
-        tokens
-      });
+      };
+
+      expect(result).to.deep.equal(expectedResponse);
+      expect(producerServiceSendStub.notCalled).to.be.false;
     });
   });
 
   describe('login', () => {
     it('should log in a user', async () => {
-      // Membuat stub untuk authService.loginUserWithEmailAndPassword
-      const loginUserStub = sinon.stub(authService, 'loginUserWithEmailAndPassword').resolves({
-        emailAddress: 'adimunawar@example.com',
-        password: 'Test123',
-      });
-      
       const userData = new LoginDto();
-      userData.emailAddress = 'adimunawar@example.com';
+      userData.emailAddress = 'adi@gmail.com';
       userData.password = 'Test123';
 
-      const user = await authController.login(userData);
-      const tokens = {};
+      const userMock = {
+        userName: 'D2Y',
+        emailAddress: 'adi@gmail.com',
+        identityNumber: '0987654321654321',
+        accountNumber: '1234567890',
+        isEmailVerified: false,
+        createdAt: '2023-10-12T13:23:51.910Z',
+        updatedAt: '2023-10-13T09:02:24.235Z',
+        id: '6527f36782e620f58d849179',
+      };
 
-      expect(loginUserStub.calledWith(userData.emailAddress, userData.password)).to.be.true;
-      expect(user).to.deep.equal({
-        user: {
-          emailAddress: 'adimunawar@example.com',
-          password: 'Test123',
+      const accessTokensMock = {
+        token: TOKEN,
+        expires: 1697523600,
+      };
+
+      const refreshTokensMock = {
+        token: TOKEN,
+        expires: 1697523600,
+      };
+
+      authService.loginUserWithEmailAndPassword.resolves(userMock);
+      tokenService.generateAuthTokens.resolves({ access: accessTokensMock, refresh: refreshTokensMock });
+
+      const result = await authController.login(userData);
+
+      expect(authService.loginUserWithEmailAndPassword.calledWith(userData.emailAddress, userData.password)).to.be.true;
+      expect(tokenService.generateAuthTokens.calledWith(userMock)).to.be.true;
+
+      const expectedResponse = {
+        user: userMock,
+        tokens: {
+          access: accessTokensMock,
+          refresh: refreshTokensMock,
         },
-        tokens
-      });
+      };
+
+      expect(result).to.deep.equal(expectedResponse);
     });
   });
 
   describe('logout', () => {
-    it('should log out a user', async () => {
-      // Membuat stub untuk authService.logout
-      const logoutStub = sinon.stub(authService, 'logout').resolves();
-  
-      const userData = { refreshToken: 'dummy-refresh-token' };
+    it('should log out the user', async () => {
+      const logoutDto = new LogoutDto();
+      logoutDto.refreshToken = 'some-refresh-token';
 
-      const result = await authController.logout(userData);
-      
-      expect(logoutStub.calledWith(userData.refreshToken)).to.be.true;
+      authService.logout.resolves();
+
+      const result = await authController.logout(logoutDto);
+
+      expect(authService.logout.calledWith(logoutDto.refreshToken)).to.be.true;
       expect(result).to.deep.equal({ message: 'logout success' });
     });
   });
 
   describe('refreshToken', () => {
-    it('should refresh user token and refresh token', async () => {
-      // Membuat stub untuk authService.refreshAuth
-      const refreshAuthStub = sinon.stub(authService, 'refreshAuth').resolves({});
-  
-      const userData = { refreshToken: 'dummy-refresh-token' };
+    it('should renew user token and refresh token', async () => {
+      const refreshTokenDto = new RefreshTokenDto();
+      refreshTokenDto.refreshToken = 'some-refresh-token';
 
-      const result = await authController.refreshToken(userData);
-      
-      expect(refreshAuthStub.calledWith(userData.refreshToken)).to.be.true;
-      expect(result).to.deep.equal({ /* data dummy hasil refreshToken */ });
+      const accessTokensMock = {
+        token: TOKEN,
+        expires: 1697523600,
+      };
+
+      const refreshTokensMock = {
+        token: TOKEN,
+        expires: 1697523600,
+      };
+
+      authService.refreshAuth.resolves({ access: accessTokensMock, refresh: refreshTokensMock });
+
+      const result = await authController.refreshToken(refreshTokenDto);
+
+      expect(authService.refreshAuth.calledWith(refreshTokenDto.refreshToken)).to.be.true;
+      expect(result).to.deep.equal({ access: accessTokensMock, refresh: refreshTokensMock });
     });
   });
 
   describe('forgotPassword', () => {
     it('should send reset token to reset the password', async () => {
-      // Membuat stub untuk tokenService.generateResetPasswordToken
-      const generateResetPasswordTokenStub = sinon.stub(tokenService, 'generateResetPasswordToken').resolves('reset-token');
-    
-      const userData = { emailAddress: 'adimunawar' };
+      const forgotPasswordDto = new ForgotPasswordDto();
+      forgotPasswordDto.emailAddress = 'adi@example.com';
 
-      const result = await authController.forgotPassword(userData);
-      
-      expect(generateResetPasswordTokenStub.calledWith(userData.emailAddress)).to.be.true;
-      expect(result).to.deep.equal({ token: 'reset-token' });
+      const resetToken = TOKEN;
+
+      tokenService.generateResetPasswordToken.resolves(resetToken);
+
+      const result = await authController.forgotPassword(forgotPasswordDto);
+
+      expect(tokenService.generateResetPasswordToken.calledWith(forgotPasswordDto.emailAddress)).to.be.true;
+      expect(result).to.deep.equal({ token: resetToken });
     });
   });
 
   describe('resetPassword', () => {
     it('should reset user password', async () => {
-      // Membuat stub untuk authService.resetPassword
-      const resetPasswordStub = sinon.stub(authService, 'resetPassword').resolves();
-    
-      const userData = { token: 'reset-token', password: 'new-password' };
+      const resetPasswordDto = new ResetPasswordDto();
+      resetPasswordDto.token = TOKEN;
+      resetPasswordDto.password = 'new-password';
 
-      const result = await authController.resetPassword(userData);
-      
-      expect(resetPasswordStub.calledWith(userData.token, userData.password)).to.be.true;
+      authService.resetPassword.resolves();
+
+      const result = await authController.resetPassword(resetPasswordDto);
+
+      expect(authService.resetPassword.calledWith(resetPasswordDto.token, resetPasswordDto.password)).to.be.true;
       expect(result).to.deep.equal({ message: 'password successfully updated' });
     });
   });

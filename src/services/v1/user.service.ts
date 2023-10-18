@@ -1,14 +1,16 @@
-import mongoose, { ObjectId } from 'mongoose';
-import { BadRequestError, NotFoundError } from 'routing-controllers';
-import RedisClient from '../../configs/redis';
+import { CONSTANT } from '@commons/constants';
 import CRUD from '@commons/interfaces/user.crud.interface';
-import Users from '@models/users.model';
 import { IUser, IUserSchema } from '@commons/interfaces/user.interface';
 import RegisterDto from '@dtos/auth/register.dto';
-import { CONSTANT } from '@commons/constants';
+import mongoose, { ObjectId } from 'mongoose';
+import { BadRequestError, NotFoundError } from 'routing-controllers';
+
+import Users from '@models/users.model';
+
+import RedisClient from '../../configs/redis';
 
 export class UserService implements CRUD<IUserSchema> {
-  private readonly userModel = Users;
+  private userModel = Users;
 
   async isEmailTaken(emailAddress: string): Promise<boolean> {
     const user = await this.userModel.findOne({ emailAddress });
@@ -86,6 +88,7 @@ export class UserService implements CRUD<IUserSchema> {
       .lean();
 
     const sanitizedDocs = docs.map(doc => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...rest } = doc;
       return rest;
     });

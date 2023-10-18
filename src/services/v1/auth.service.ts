@@ -1,13 +1,14 @@
-import { NotFoundError, UnauthorizedError } from 'routing-controllers';
-import bcrypt from 'bcrypt';
 import { TokenTypes } from '@commons/constants';
+import bcrypt from 'bcrypt';
+import { NotFoundError, UnauthorizedError } from 'routing-controllers';
+
 import Tokens from '@models/tokens.model';
 import { TokenService, UserService } from '@services/v1';
 
 export class AuthService {
-  private readonly tokenModel = Tokens;
-  private readonly userService = new UserService();
-  private readonly tokenService = new TokenService();
+  public tokenModel = Tokens;
+  private userService = new UserService();
+  private tokenService = new TokenService();
 
   async loginUserWithEmailAndPassword(emailAddress: string, password: string) {
     const user = await this.userService.getUserByEmail(emailAddress);

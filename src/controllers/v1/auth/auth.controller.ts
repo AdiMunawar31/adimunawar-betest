@@ -1,16 +1,16 @@
-import { Body, HttpCode, JsonController, Post, UseBefore } from 'routing-controllers';
-import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
-
-import { validationMiddleware } from '@middlewares/validation.middleware';
-import { AuthService, TokenService, UserService } from '@services/v1';
-
+import { IUser } from '@commons/interfaces/user.interface';
 import ForgotPasswordDto from '@dtos/auth/forgotPassword.dto';
 import LoginDto, { LoginResponseSchema } from '@dtos/auth/login.dto';
 import LogoutDto from '@dtos/auth/logout.dto';
 import RefreshTokenDto from '@dtos/auth/refreshToken.dto';
 import RegisterDto from '@dtos/auth/register.dto';
 import ResetPasswordDto from '@dtos/auth/resetPassword.dto';
-import { IUser } from '@commons/interfaces/user.interface';
+import { Body, HttpCode, JsonController, Post, UseBefore } from 'routing-controllers';
+import { OpenAPI, ResponseSchema } from 'routing-controllers-openapi';
+
+import { validationMiddleware } from '@middlewares/validation.middleware';
+import { AuthService, TokenService, UserService } from '@services/v1';
+import producerService from '@services/v1/producer.service';
 
 @JsonController('/v1/auth', { transformResponse: false })
 export class AuthController {
@@ -26,6 +26,8 @@ export class AuthController {
   async register(@Body() userData: RegisterDto) {
     const user = await this.userService.createUser(userData);
     const tokens = await this.tokenService.generateAuthTokens(user);
+
+    await producerService.send(user, 'kafka_adimunawar_betest');
 
     return { user, tokens };
   }
